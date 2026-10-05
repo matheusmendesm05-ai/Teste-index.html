@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Canal de Denúncias - QOD (POC)</title>
+  <style>
+    :root {
+      --primary: #0f172a;
+      --secondary: #2563eb;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --text: #334155;
+      --border: #e2e8f0;
+      --success: #16a34a;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background-color: var(--bg); color: var(--text); padding: 20px; line-height: 1.5; }
+    .container { max-width: 1000px; margin: 0 auto; }
+    
+    header { background: var(--primary); color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
+    header h1 { font-size: 1.2rem; }
+    
+    .nav-tabs { display: flex; gap: 10px; margin-bottom: 20px; }
+    .tab-btn { padding: 10px 18px; border: none; background: #e2e8f0; border-radius: 6px; cursor: pointer; font-weight: 600; }
+    .tab-btn.active { background: var(--secondary); color: white; }
+    
+    .card { background: var(--card-bg); padding: 24px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+    
+    .form-group { margin-bottom: 16px; }
+    label { display: block; font-weight: 600; margin-bottom: 6px; font-size: 0.9rem; }
+    input[type="text"], textarea, select { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.95rem; }
+    textarea { resize: vertical; min-height: 100px; }
+    
+    .btn { padding: 10px 20px; background: var(--secondary); color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.95rem; font-weight: 600; }
+    .btn:hover { opacity: 0.9; }
+    
+    .protocol-box { background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; padding: 16px; border-radius: 6px; margin-top: 15px; }
+    
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { padding: 12px; border-bottom: 1px solid var(--border); text-align: left; font-size: 0.9rem; }
+    th { background: #f1f5f9; }
+    
+    .status-badge { padding: 4px 8px; border-radius: 12px; font-size: 0.8rem; font-weight: 600; text-transform: uppercase; }
+    .status-Registrado { background: #e0f2fe; color: #0369a1; }
+    .status-Em-Análise { background: #fef3c7; color: #b45309; }
+    .status-Concluído { background: #dcfce7; color: #15803d; }
+    
+    .chat-box { background: #f8fafc; border: 1px solid var(--border); padding: 15px; border-radius: 6px; max-height: 250px; overflow-y: auto; margin-bottom: 15px; }
+    .msg { margin-bottom: 10px; padding: 8px 12px; border-radius: 6px; max-width: 80%; }
+    .msg.relator { background: #e0f2fe; margin-left: auto; }
+    .msg.admin { background: #ffffff; border: 1px solid var(--border); }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <h1>QOD - Canal de Denúncias (POC)</h1>
+    <span>Protótipo de Testes</span>
+  </header>
+
+  <div class="nav-tabs">
+    <button class="tab-btn active" onclick="switchTab('fazer-denuncia')">Fazer Denúncia</button>
+    <button class="tab-btn" onclick="switchTab('acompanhar')">Acompanhar Protocolo</button>
+    <button class="tab-btn" onclick="switchTab('admin')">Painel Gestor (Admin)</button>
+  </div>
+
+  <!-- ABA 1: REGISTRAR DENÚNCIA -->
+  <div id="fazer-denuncia" class="card tab-content">
+    <h2>Registrar Nova Denúncia</h2>
+    <p style="margin-bottom: 20px; font-size: 0.9rem; color: #64748b;">Garantimos sigilo e a possibilidade de registro 100% anônimo.</p>
+    
+    <form id="denunciaForm" onsubmit="salvarDenuncia(event)">
+      <div class="form-group">
+        <label>Tipo de Relator</label>
+        <select id="tipoRelator" required>
+          <option value="Colaborador">Colaborador</option>
+          <option value="Cliente">Cliente</option>
+          <option value="Fornecedor">Fornecedor</option>
+          <option value="Terceiro">Terceiro</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Categoria da Denúncia</label>
+        <select id="categoria" required>
+          <option value="Fraude / Corrupção">Fraude / Corrupção</option>
+          <option value="Assédio Moral / Sexual">Assédio Moral / Sexual</option>
+          <option value="Vazamento de Dados (LGPD)">Vazamento de Dados (LGPD)</option>
+          <option value="Discriminação">Discriminação</option>
+          <option value="Outros">Outros</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Identificação do Relator (Opcional)</label>
+        <input type="text" id="nomeRelator" placeholder="Deixe em branco para enviar de forma Anônima" />
+      </div>
+
+      <div class="form-group">
+        <label>Descrição Detalhada dos Fatos</label>
+        <textarea id="descricao" required placeholder="Relate o ocorrido com o máximo de detalhes possível..."></textarea>
+      </div>
+
+      <button type="submit" class="btn">Enviar Denúncia</button>
+    </form>
+
+    <div id="protocoloResult" class="protocol-box hidden"></div>
+  </div>
+
+  <!-- ABA 2: ACOMPANHAR PROTOCOLO -->
+  <div id="acompanhar" class="card tab-content hidden">
+    <h2>Acompanhar Denúncia por Protocolo</h2>
+    <div style="display: flex; gap: 10px; margin-top: 15px; margin-bottom: 20px;">
+      <input type="text" id="inputProtocolo" placeholder="Digite seu protocolo (Ex: DEN-849231)" />
+      <button class="btn" onclick="buscarProtocolo()">Buscar</button>
+    </div>
+
+    <div id="detalhesProtocolo" class="hidden">
+      <hr style="margin: 20px 0; border: none; border-top: 1px solid var(--border);" />
+      <h3>Status: <span id="statusView" class="status-badge"></span></h3>
+      <p style="margin-top: 10px;"><strong>Categoria:</strong> <span id="catView"></span></p>
+      <p style="margin-top: 5px;"><strong>Data de Registro:</strong> <span id="dataView"></span></p>
+      
+      <h4 style="margin-top: 20px; margin-bottom: 10px;">Histórico de Comunicação</h4>
+      <div id="chatPublico" class="chat-box"></div>
+
+      <div class="form-group">
+        <label>Enviar Informação Complementar</label>
+        <textarea id="msgPublicaInput" placeholder="Escreva uma mensagem para a comissão de ética..."></textarea>
+      </div>
+      <button class="btn" onclick="enviarMensagemPublica()">Enviar Resposta</button>
+    </div>
+  </div>
+
+  <!-- ABA 3: PAINEL ADMINISTRATIVO -->
+  <div id="admin" class="card tab-content hidden">
+    <h2>Gestão de Denúncias - Visão do Comitê de Ética</h2>
+    <p style="margin-bottom: 20px; font-size: 0.9rem; color: #64748b;">Área restrita para análise e tratamento dos casos registrados.</p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Protocolo</th>
+          <th>Data</th>
+          <th>Relator</th>
+          <th>Categoria</th>
+          <th>Status</th>
+          <th>Ações</th>
+        </tr>
+      </thead>
+      <tbody id="tabelaAdmin"></tbody>
+    </table>
+
+    <div id="modalAdmin" class="card hidden" style="margin-top: 20px; border-color: var(--secondary);">
+      <h3>Gerenciar Denúncia: <span id="adminProtocoloTitle"></span></h3>
+      <p style="margin-top: 10px;"><strong>Relator:</strong> <span id="adminRelator"></span></p>
+      <p><strong>Descrição:</strong> <span id="adminDesc"></span></p>
+
+      <div class="form-group" style="margin-top: 15px;">
+        <label>Alterar Status da Denúncia</label>
+        <select id="adminStatusSelect">
+          <option value="Registrado">Registrado</option>
+          <option value="Em Análise">Em Análise</option>
+          <option value="Concluído">Concluído</option>
+        </select>
+      </div>
+
+      <h4>Mensagens Trocadas</h4>
+      <div id="chatAdmin" class="chat-box" style="margin-top: 10px;"></div>
+
+      <div class="form-group">
+        <label>Responder ao Denunciante</label>
+        <textarea id="msgAdminInput" placeholder="Mensagem interna ou resposta ao relator..."></textarea>
+      </div>
+      
+      <button class="btn" onclick="salvarAtualizacaoAdmin()">Atualizar Caso</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  let denúncias = JSON.parse(localStorage.getItem('denuncias_qod')) || [];
+  let protocoloAtual = null;
+
+  function switchTab(tabId) {
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+    document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+    document.getElementById(tabId).classList.remove('hidden');
+    event.target.classList.add('active');
+    if (tabId === 'admin') renderTabelaAdmin();
+  }
+
+  function gerarProtocolo() {
+    return 'DEN-' + Math.floor(100000 + Math.random() * 900000);
+  }
+
+  function salvarDenuncia(e) {
+    e.preventDefault();
+    const prot = gerarProtocolo();
+    const novaDenuncia = {
+      protocolo: prot,
+      tipoRelator: document.getElementById('tipoRelator').value,
+      categoria: document.getElementById('categoria').value,
+      nomeRelator: document.getElementById('nomeRelator').value.trim() || 'Anônimo',
+      descricao: document.getElementById('descricao').value,
+      status: 'Registrado',
+      data: new Date().toLocaleString('pt-BR'),
+      mensagens: [{ autor: 'admin', texto: 'Denúncia recebida no sistema e aguardando análise inicial.' }]
+    };
+
+    denúncias.push(novaDenuncia);
+    localStorage.setItem('denuncias_qod', JSON.stringify(denúncias));
+
+    const resBox = document.getElementById('protocoloResult');
+    resBox.innerHTML = `<strong>Denúncia registrada com sucesso!</strong><br>Guarde seu protocolo para acompanhamento: <h2>${prot}</h2>`;
+    resBox.classList.remove('hidden');
+    document.getElementById('denunciaForm').reset();
+  }
+
+  function buscarProtocolo() {
+    const pInput = document.getElementById('inputProtocolo').value.trim();
+    const den = denúncias.find(d => d.protocolo === pInput);
+    if (!den) { alert('Protocolo não encontrado!'); return; }
+    
+    protocoloAtual = pInput;
+    document.getElementById('detalhesProtocolo').classList.remove('hidden');
+    document.getElementById('catView').innerText = den.categoria;
+    document.getElementById('dataView').innerText = den.data;
+    
+    const sBadge = document.getElementById('statusView');
+    sBadge.innerText = den.status;
+    sBadge.className = 'status-badge status-' + den.status.replace(' ', '-');
+
+    renderChat('chatPublico', den.mensagens);
+  }
+
+  function enviarMensagemPublica() {
+    const txt = document.getElementById('msgPublicaInput').value.trim();
+    if (!txt || !protocoloAtual) return;
+    
+    const den = denúncias.find(d => d.protocolo === protocoloAtual);
+    den.mensagens.push({ autor: 'relator', texto: txt });
+    localStorage.setItem('denuncias_qod', JSON.stringify(denúncias));
+    
+    document.getElementById('msgPublicaInput').value = '';
+    renderChat('chatPublico', den.mensagens);
+  }
+
+  function renderTabelaAdmin() {
+    const tbody = document.getElementById('tabelaAdmin');
+    tbody.innerHTML = '';
+    denúncias.forEach(d => {
+      tbody.innerHTML += `
+        <tr>
+          <td><strong>${d.protocolo}</strong></td>
+          <td>${d.data}</td>
+          <td>${d.nomeRelator}</td>
+          <td>${d.categoria}</td>
+          <td><span class="status-badge status-${d.status.replace(' ', '-')}">${d.status}</span></td>
+          <td><button class="btn" style="padding: 4px 8px; font-size: 0.8rem;" onclick="abrirAdminModal('${d.protocolo}')">Gerenciar</button></td>
+        </tr>
+      `;
+    });
+  }
+
+  function abrirAdminModal(prot) {
+    protocoloAtual = prot;
+    const den = denúncias.find(d => d.protocolo === prot);
+    document.getElementById('modalAdmin').classList.remove('hidden');
+    document.getElementById('adminProtocoloTitle').innerText = den.protocolo;
+    document.getElementById('adminRelator').innerText = `${d.nomeRelator} (${d.tipoRelator})`;
+    document.getElementById('adminDesc').innerText = den.descricao;
+    document.getElementById('adminStatusSelect').value = den.status;
+
+    renderChat('chatAdmin', den.mensagens);
+  }
+
+  function salvarAtualizacaoAdmin() {
+    const den = denúncias.find(d => d.protocolo === protocoloAtual);
+    den.status = document.getElementById('adminStatusSelect').value;
+    
+    const txt = document.getElementById('msgAdminInput').value.trim();
+    if (txt) {
+      den.mensagens.push({ autor: 'admin', texto: txt });
+      document.getElementById('msgAdminInput').value = '';
+    }
+
+    localStorage.setItem('denuncias_qod', JSON.stringify(denúncias));
+    renderChat('chatAdmin', den.mensagens);
+    renderTabelaAdmin();
+    alert('Denúncia atualizada com sucesso!');
+  }
+
+  function renderChat(elementId, mensagens) {
+    const container = document.getElementById(elementId);
+    container.innerHTML = '';
+    mensagens.forEach(m => {
+      container.innerHTML += `<div class="msg ${m.autor}"><strong>${m.autor === 'relator' ? 'Denunciante' : 'Comitê'}:</strong> ${m.texto}</div>`;
+    });
+  }
+</script>
+
+</body>
+</html>
