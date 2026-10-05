@@ -12,7 +12,6 @@
       --card-bg: #ffffff;
       --text: #334155;
       --border: #e2e8f0;
-      --danger: #ef4444;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
@@ -23,7 +22,7 @@
     header h1 { font-size: 1.2rem; }
     
     .nav-tabs { display: flex; gap: 10px; margin-bottom: 20px; }
-    .tab-btn { padding: 10px 18px; border: none; background: #e2e8f0; border-radius: 6px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+    .tab-btn { padding: 10px 18px; border: none; background: #e2e8f0; border-radius: 6px; cursor: pointer; font-weight: 600; }
     .tab-btn.active { background: var(--secondary); color: white; }
     
     .card { background: var(--card-bg); padding: 24px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
@@ -52,7 +51,7 @@
     .msg { margin-bottom: 10px; padding: 8px 12px; border-radius: 6px; max-width: 80%; }
     .msg.relator { background: #e0f2fe; margin-left: auto; }
     .msg.admin { background: #ffffff; border: 1px solid var(--border); }
-    .hidden { display: none; }
+    .hidden { display: none !important; }
   </style>
 </head>
 <body>
@@ -64,9 +63,9 @@
   </header>
 
   <div class="nav-tabs">
-    <button class="tab-btn active" id="btn-fazer-denuncia" onclick="switchTab('fazer-denuncia')">Fazer Denúncia</button>
-    <button class="tab-btn" id="btn-acompanhar" onclick="switchTab('acompanhar')">Acompanhar Protocolo</button>
-    <button class="tab-btn" id="btn-admin" onclick="acessarAdmin()">🔒 Painel Gestor (Admin)</button>
+    <button class="tab-btn active" id="btn-fazer-denuncia" onclick="abrirAba('fazer-denuncia')">Fazer Denúncia</button>
+    <button class="tab-btn" id="btn-acompanhar" onclick="abrirAba('acompanhar')">Acompanhar Protocolo</button>
+    <button class="tab-btn" id="btn-admin" onclick="abrirAbaAdmin()">🔒 Painel Gestor (Admin)</button>
   </div>
 
   <!-- ABA 1: REGISTRAR DENÚNCIA -->
@@ -133,4 +132,107 @@
         <label>Enviar Informação Complementar</label>
         <textarea id="msgPublicaInput" placeholder="Escreva uma mensagem para a comissão de ética..."></textarea>
       </div>
-      <button class
+      <button class="btn" onclick="enviarMensagemPublica()">Enviar Resposta</button>
+    </div>
+  </div>
+
+  <!-- ABA TELA DE LOGIN ADMIN -->
+  <div id="login-admin" class="card tab-content hidden" style="max-width: 400px; margin: 40px auto;">
+    <h2>Acesso Restrito</h2>
+    <p style="margin-bottom: 15px; font-size: 0.9rem; color: #64748b;">Área exclusiva do Comitê de Ética da QOD.</p>
+    <form onsubmit="autenticarAdmin(event)">
+      <div class="form-group">
+        <label>Senha de Acesso</label>
+        <input type="password" id="senhaAdminInput" placeholder="Digite a senha (padrão: admin123)" required />
+      </div>
+      <button type="submit" class="btn" style="width: 100%;">Entrar no Painel</button>
+    </form>
+  </div>
+
+  <!-- ABA 3: PAINEL ADMINISTRATIVO -->
+  <div id="admin" class="card tab-content hidden">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+      <h2>Gestão de Denúncias - Visão do Comitê de Ética</h2>
+      <button class="btn btn-logout" onclick="encerrarSessaoAdmin()">Sair do Painel</button>
+    </div>
+    <p style="margin-bottom: 20px; font-size: 0.9rem; color: #64748b;">Área restrita para análise e tratamento dos casos registrados.</p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Protocolo</th>
+          <th>Data</th>
+          <th>Relator</th>
+          <th>Categoria</th>
+          <th>Status</th>
+          <th>Ações</th>
+        </tr>
+      </thead>
+      <tbody id="tabelaAdmin"></tbody>
+    </table>
+
+    <div id="modalAdmin" class="card hidden" style="margin-top: 20px; border-color: var(--secondary);">
+      <h3>Gerenciar Denúncia: <span id="adminProtocoloTitle"></span></h3>
+      <p style="margin-top: 10px;"><strong>Relator:</strong> <span id="adminRelator"></span></p>
+      <p><strong>Descrição:</strong> <span id="adminDesc"></span></p>
+
+      <div class="form-group" style="margin-top: 15px;">
+        <label>Alterar Status da Denúncia</label>
+        <select id="adminStatusSelect">
+          <option value="Registrado">Registrado</option>
+          <option value="Em Análise">Em Análise</option>
+          <option value="Concluído">Concluído</option>
+        </select>
+      </div>
+
+      <h4>Mensagens Trocadas</h4>
+      <div id="chatAdmin" class="chat-box" style="margin-top: 10px;"></div>
+
+      <div class="form-group">
+        <label>Responder ao Denunciante</label>
+        <textarea id="msgAdminInput" placeholder="Mensagem interna ou resposta ao relator..."></textarea>
+      </div>
+      
+      <button class="btn" onclick="salvarAtualizacaoAdmin()">Atualizar Caso</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const SENHA_MESTRE = "admin123";
+  let adminAutenticado = false;
+  let denúncias = JSON.parse(localStorage.getItem('denuncias_qod')) || [];
+  let protocoloAtual = null;
+
+  function abrirAba(tabId) {
+    // Esconde todas as abas
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+    document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+    
+    // Mostra a aba desejada
+    const abaAlvo = document.getElementById(tabId);
+    if(abaAlvo) abaAlvo.classList.remove('hidden');
+
+    // Marca o botão como ativo
+    const btnAlvo = document.getElementById('btn-' + tabId);
+    if(btnAlvo) btnAlvo.classList.add('active');
+  }
+
+  function abrirAbaAdmin() {
+    if (adminAutenticado) {
+      abrirAba('admin');
+      renderTabelaAdmin();
+    } else {
+      abrirAba('login-admin');
+      document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+      document.getElementById('btn-admin').classList.add('active');
+    }
+  }
+
+  function autenticarAdmin(e) {
+    e.preventDefault();
+    const senhaDigitada = document.getElementById('senhaAdminInput').value;
+    if (senhaDigitada === SENHA_MESTRE) {
+      adminAutenticado = true;
+      document.getElementById('senhaAdminInput').value = '';
+      abrirAba('admin');
